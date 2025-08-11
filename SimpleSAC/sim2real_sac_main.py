@@ -121,6 +121,7 @@ def main(argv):
     eval_sampler = TrajSampler(real_env.unwrapped, FLAGS.max_traj_length)
 
     # replay buffer
+    # MixedReplayBuffer contiene sia esperienze reali che simulate
     num_state = real_env.observation_space.shape[0]
     num_action = real_env.action_space.shape[0]
     replay_buffer = MixedReplayBuffer(FLAGS.reward_scale, FLAGS.reward_bias, FLAGS.clip_action, num_state, num_action, task=env_name.split("-")[0].lower(), data_source=FLAGS.data_source, device=FLAGS.device, buffer_ratio=FLAGS.replaybuffer_ratio, residual_ratio=FLAGS.real_residual_ratio)

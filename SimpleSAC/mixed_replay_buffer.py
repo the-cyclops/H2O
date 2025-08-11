@@ -8,7 +8,9 @@ from gym.spaces import Box, Discrete, Tuple
 from envs import get_dim
 from replay_buffer import ReplayBuffer
 
-
+# Differenze dataset: 
+# medium rappresenta un dataset collezionato da una policy statica già trainata, abbiamo quindi alta qualità ma poca esplorazione (on policy)
+# medium_replay rappresenta un dataset collezionato da una policy nel processo di training, abbiamo quindi bassa qualità ma alta esplorazione (off policy)
 class MixedReplayBuffer(ReplayBuffer):
     def __init__(self, reward_scale, reward_bias, clip_action, state_dim, action_dim, task="halfcheetah", data_source="medium_replay",  device="cuda", scale_rewards=True, scale_state=False, buffer_ratio=1, residual_ratio=0.1):
         super().__init__(state_dim, action_dim, device=device)
