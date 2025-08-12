@@ -1,3 +1,6 @@
+### IMPLEMENTATION OF SIMPLE SAC MODELS ###
+
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -119,6 +122,7 @@ class ReparameterizedTanhGaussian(nn.Module):
         return action_sample, log_prob
 
 
+# Actor (policy network) → TanhGaussianPolicy
 class TanhGaussianPolicy(nn.Module):
 
     def __init__(self, observation_dim, action_dim, arch='256-256',
@@ -174,6 +178,7 @@ class SamplerPolicy(object):
         return actions
 
 
+# Critic (Q-value networks) → FullyConnectedQFunction
 class FullyConnectedQFunction(nn.Module):
 
     def __init__(self, observation_dim, action_dim, arch='256-256', orthogonal_init=False):

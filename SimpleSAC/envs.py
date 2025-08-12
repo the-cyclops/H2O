@@ -4,7 +4,10 @@
 '''
 
 import gym
-from gym.spaces import Box, Discrete, Tuple
+
+# These are used to describe observation spaces and action spaces in RL environments so that agents know the format of inputs and outputs.
+from gym.spaces import Box, Discrete, Tuple 
+
 from utils_h2o import update_target_env_gravity, update_target_env_density, update_target_env_friction, update_source_env
 
 
