@@ -158,6 +158,7 @@ class Sim2realSAC(object):
         df_new_actions, df_log_pi = self.policy(df_observations)
 
         # True by default
+        # alpha is the lambda parameter autotuned
         if self.config.use_automatic_entropy_tuning:
             alpha_loss = -(self.log_alpha() * (df_log_pi + self.config.target_entropy).detach()).mean()
             alpha = self.log_alpha().exp() * self.config.alpha_multiplier
@@ -167,7 +168,8 @@ class Sim2realSAC(object):
 
         """ Policy loss """
         # Improve policy under state marginal distribution d_f
-        if bc:
+        # Why do we improve policy before update of Q? for stability
+        if bc: # this never happens
             log_probs = self.policy.log_prob(df_observations, df_actions)
             policy_loss = (alpha * df_log_pi - log_probs).mean()
         else:
@@ -176,6 +178,7 @@ class Sim2realSAC(object):
                 self.qf1(df_observations, df_new_actions),
                 self.qf2(df_observations, df_new_actions),
             )
+            # final policy loss
             policy_loss = (alpha * df_log_pi - q_new_actions).mean() 
 
         """ Q function loss """
@@ -204,9 +207,11 @@ class Sim2realSAC(object):
         if self.config.backup_entropy:
             real_target_q_values = real_target_q_values - alpha * real_next_log_pi
             sim_target_q_values = sim_target_q_values - alpha * sim_next_log_pi
+        # self.config.discount is gamma in the paper
         real_td_target = torch.squeeze(real_rewards, -1) + (1. - torch.squeeze(real_dones, -1)) * self.config.discount * real_target_q_values
         sim_td_target = torch.squeeze(sim_rewards, -1) + (1. - torch.squeeze(sim_dones, -1)) * self.config.discount * sim_target_q_values
-
+        
+        # partial bellman
         real_qf1_loss = F.mse_loss(real_q1_pred, real_td_target.detach())
         real_qf2_loss = F.mse_loss(real_q2_pred, real_td_target.detach())
 
@@ -219,6 +224,7 @@ class Sim2realSAC(object):
         sim_qf1_loss = F.mse_loss(sqrt_IS_ratio.squeeze() * sim_q1_pred, sqrt_IS_ratio.squeeze() * sim_td_target.detach())
         sim_qf2_loss = F.mse_loss(sqrt_IS_ratio.squeeze() * sim_q2_pred, sqrt_IS_ratio.squeeze() * sim_td_target.detach())
 
+        # Bellman error calculated
         qf1_loss = real_qf1_loss + sim_qf1_loss
         qf2_loss = real_qf2_loss + sim_qf2_loss
 
@@ -259,6 +265,7 @@ class Sim2realSAC(object):
 
 
             """Q values on the stat-actions with larger dynamics gap - Q values on data"""
+            # policy eval without bellman error
             cql_qf1_diff = torch.clamp(
                 cql_qf1_gap - real_q1_pred.mean(),
                 self.config.cql_clip_diff_min,
@@ -281,13 +288,13 @@ class Sim2realSAC(object):
                 alpha_prime_loss.backward(retain_graph=True)
                 self.alpha_prime_optimizer.step()
             else:
+                # self.config.cql_min_q_weight is our beta parameter
                 cql_min_qf1_loss = cql_qf1_diff * self.config.cql_min_q_weight
                 cql_min_qf2_loss = cql_qf2_diff * self.config.cql_min_q_weight
                 alpha_prime_loss = df_observations.new_tensor(0.0)
                 alpha_prime = df_observations.new_tensor(0.0)
 
             qf_loss = qf1_loss + qf2_loss + cql_min_qf1_loss + cql_min_qf2_loss
-
 
             if self.config.use_automatic_entropy_tuning:
                 self.alpha_optimizer.zero_grad()
