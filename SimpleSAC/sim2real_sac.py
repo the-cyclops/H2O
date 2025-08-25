@@ -168,7 +168,7 @@ class Sim2realSAC(object):
 
         """ Policy loss """
         # Improve policy under state marginal distribution d_f
-        # Why do we improve policy before update of Q? for stability
+        # We improve policy before update of Q for stability
         if bc: # this never happens
             log_probs = self.policy.log_prob(df_observations, df_actions)
             policy_loss = (alpha * df_log_pi - log_probs).mean()
