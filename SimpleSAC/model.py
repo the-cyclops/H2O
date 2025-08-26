@@ -78,7 +78,7 @@ class FullyConnectedNetwork(nn.Module):
     def forward(self, input_tensor):
         return self.network(input_tensor)
 
-
+# to maintain the function differentiable, we implement the reparameterization trick ourselves
 class ReparameterizedTanhGaussian(nn.Module):
 
     def __init__(self, log_std_min=-20.0, log_std_max=2.0, no_tanh=False):

@@ -3,6 +3,8 @@ import torch
 import pdb
 
 
+# Used for the training and evaluation step
+
 class StepSampler(object):
 
     def __init__(self, env, max_traj_length=1000):

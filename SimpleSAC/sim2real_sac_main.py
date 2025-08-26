@@ -75,7 +75,7 @@ FLAGS_DEF = define_flags_with_default(
 	logging=WandBLogger.get_default_config()
 )
 
-
+# SIMULATION-BASED EXPERIMENTS
 def main(argv):
 	FLAGS = absl.flags.FLAGS
 
@@ -117,9 +117,12 @@ def main(argv):
 					
 				print("\n-------------Env name: {}, variety: {}, unreal_dynamics: {}-------------".format(env_name, variety_degree, unreal_dynamics))
 
-	# a step sampler for "simulated" training, use StepSampler class to sample steps
+	# a step sampler for "simulated" training, use StepSampler class to sample steps,
+	# sample each step 
 	train_sampler = StepSampler(sim_env.unwrapped, FLAGS.max_traj_length)
+	
 	# a trajectory sampler for "real-world" evaluation, use TrajSampler class to sample trajectories
+	# use to create the offline dataset in a real word env	
 	eval_sampler = TrajSampler(real_env.unwrapped, FLAGS.max_traj_length)
 
 	# replay buffer
@@ -173,7 +176,8 @@ def main(argv):
 	sac = Sim2realSAC(FLAGS.cql, policy, qf1, qf2, target_qf1, target_qf2, d_sa, d_sas, replay_buffer, dynamics_model=None)
 	sac.torch_to_device(FLAGS.device)
 
-	# sampling policy is always the current policy: \pi
+	# sampling policy is always the current policy: pi
+	# Primo Rollout
 	sampler_policy = SamplerPolicy(policy, FLAGS.device)
 
 	viskit_metrics = {}
@@ -192,7 +196,7 @@ def main(argv):
 			metrics['epoch'] = epoch
 
 		# TODO Train from the mixed data
-		# Calls sac.train(...) (method from Sim2realSAC), which:
+		# Calls sac.train() (method from Sim2realSAC), which:
 		# Updates critics (Q-functions)
 		# Updates the actor (policy)
 		# Updates discriminators that try to tell real vs simulated data apart (domain adaptation step).

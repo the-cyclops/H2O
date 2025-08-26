@@ -152,12 +152,15 @@ class Sim2realSAC(object):
         df_actions =  torch.cat([real_actions, sim_actions], dim=0)
         df_rewards =  torch.cat([real_rewards, sim_rewards], dim=0)
 
+        # Train discriminators, per calcolarsi omega(s,a)
+        # RIGA 3,4 PAPER
         dsa_loss, dsas_loss = self.train_discriminator()
 
-        # TODO new_action and log pi
+        # TODO new_action and log probabilities (log_pi)
         df_new_actions, df_log_pi = self.policy(df_observations)
 
         # True by default
+        # alpha is autotuning itself, we do not need to set it manually
         # alpha is the lambda parameter autotuned
         if self.config.use_automatic_entropy_tuning:
             alpha_loss = -(self.log_alpha() * (df_log_pi + self.config.target_entropy).detach()).mean()
@@ -166,15 +169,17 @@ class Sim2realSAC(object):
             alpha_loss = df_observations.new_tensor(0.0)
             alpha = df_observations.new_tensor(self.config.alpha_multiplier)
 
-        """ Policy loss """
+        """ Policy loss - IMPROVEMENT"""
         # Improve policy under state marginal distribution d_f
         # We improve policy before update of Q for stability
         if bc: # this never happens
             log_probs = self.policy.log_prob(df_observations, df_actions)
             policy_loss = (alpha * df_log_pi - log_probs).mean()
         else:
+        ## RIGA 7 PSEUDOCODICE: POLICY IMPROVEMENT
+        # alpha : lambda
             # TODO
-            q_new_actions = torch.min(
+            q_new_actions = torch.min( # take the more pessimist critic values
                 self.qf1(df_observations, df_new_actions),
                 self.qf2(df_observations, df_new_actions),
             )
@@ -255,9 +260,10 @@ class Sim2realSAC(object):
 
             # Q values on the actions sampled from the policy
             if self.config.use_variant:
-                cql_qf1_gap = (omega * cql_q1).sum()
+                cql_qf1_gap = (omega * cql_q1).sum() 
                 cql_qf2_gap = (omega * cql_q2).sum()
             else:
+                ## THIS IS THE CQL FORMULA
                 cql_q1 += torch.log(omega)
                 cql_q2 += torch.log(omega)
                 cql_qf1_gap = torch.logsumexp(cql_q1 / self.config.cql_temp, dim=0) * self.config.cql_temp
@@ -293,7 +299,8 @@ class Sim2realSAC(object):
                 cql_min_qf2_loss = cql_qf2_diff * self.config.cql_min_q_weight
                 alpha_prime_loss = df_observations.new_tensor(0.0)
                 alpha_prime = df_observations.new_tensor(0.0)
-
+            
+            # Add the Bellman Error
             qf_loss = qf1_loss + qf2_loss + cql_min_qf1_loss + cql_min_qf2_loss
 
             if self.config.use_automatic_entropy_tuning:
@@ -302,14 +309,15 @@ class Sim2realSAC(object):
                 self.alpha_optimizer.step()
 
             self.policy_optimizer.zero_grad()
-            policy_loss.backward()
+            policy_loss.backward() # prima improve
             self.policy_optimizer.step()
 
             self.qf_optimizer.zero_grad()
-            qf_loss.backward()
+            qf_loss.backward() # poi eval
             self.qf_optimizer.step()
 
             if self.total_steps % self.config.target_update_period == 0:
+                # soft update
                 self.update_target_network(
                     self.config.soft_target_update_rate
                 )
@@ -369,7 +377,7 @@ class Sim2realSAC(object):
         return self._total_steps
 
     def train_discriminator(self):
-        real_obs, real_action, real_next_obs = self.replay_buffer.sample(self.config.batch_size, scope="real", type="sas").values()
+        real_obs, real_action, real_next_obs = self.replay_buffer.sample(self.config.batch_size, scope="real", type="sas").values() # to train the 2 discriminators we need to specify type='sas' or type='sa'
         sim_obs, sim_action, sim_next_obs = self.replay_buffer.sample(self.config.batch_size, scope="sim", type="sas").values()
 
         # input noise: prevents overfitting
@@ -476,6 +484,7 @@ class Sim2realSAC(object):
         
         return log_ratio
 
+    # DYNAMICS RATIO
     def real_sim_dynacmis_ratio(self, observations, actions, next_observations):
         sa_logits = self.d_sa(observations, actions)
         sa_prob = F.softmax(sa_logits, dim=1)
