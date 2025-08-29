@@ -153,7 +153,7 @@ class Sim2realSAC(object):
         df_rewards =  torch.cat([real_rewards, sim_rewards], dim=0)
 
         # Train discriminators, per calcolarsi omega(s,a)
-        # RIGA 3,4 PAPER
+        # RIGA 4,5 PAPER
         dsa_loss, dsas_loss = self.train_discriminator()
 
         # TODO new_action and log probabilities (log_pi)
@@ -225,7 +225,7 @@ class Sim2realSAC(object):
         if self.config.use_td_target_ratio:
             sqrt_IS_ratio = torch.clamp(self.real_sim_dynacmis_ratio(sim_observations, sim_actions, sim_next_observations), self.config.clip_dynamics_ratio_min, self.config.clip_dynamics_ratio_max).sqrt()
         else:
-            sqrt_IS_ratio = torch.ones((sim_observations.shape[0],)).to(self.config.device)
+            sqrt_IS_ratio = torch.ones((sim_observations.shape[0],)).to(self.config.device) 
         sim_qf1_loss = F.mse_loss(sqrt_IS_ratio.squeeze() * sim_q1_pred, sqrt_IS_ratio.squeeze() * sim_td_target.detach())
         sim_qf2_loss = F.mse_loss(sqrt_IS_ratio.squeeze() * sim_q2_pred, sqrt_IS_ratio.squeeze() * sim_td_target.detach())
 
