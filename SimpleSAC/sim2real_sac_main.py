@@ -137,7 +137,7 @@ def main(argv):
 	d_sas = ConcatDiscriminator(2* num_state + num_action, 256, 2, FLAGS.device, dropout=FLAGS.dis_dropout).float().to(FLAGS.device) 
 
 	# actor
-	# use the model.py file to define the actor network
+	# Tanh: since the action space of HalfCheetah is bounded between -1 and 1, we use Tanh to bound the output of the policy network in this range
 	policy = TanhGaussianPolicy(
 		eval_sampler.env.observation_space.shape[0],
 		eval_sampler.env.action_space.shape[0],
